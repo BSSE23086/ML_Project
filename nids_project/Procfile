@@ -1,0 +1,3 @@
+# Procfile for AWS Elastic Beanstalk (Docker platform)
+# EB reads this to know how to start the application
+web: gunicorn --bind 0.0.0.0:5000 --workers 4 --timeout 120 app:app

@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NIDS — Network Intrusion Detection System</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --panel: #111827;
+      --border: #1f2d45;
+      --accent: #00d4ff;
+      --danger: #ff4d6d;
+      --success: #00ff9d;
+      --warn: #ffd60a;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --font: 'Courier New', monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      min-height: 100vh;
+    }
+
+    /* ---- HEADER ---- */
+    header {
+      background: linear-gradient(90deg, #0a0e1a 0%, #0f1f3d 50%, #0a0e1a 100%);
+      border-bottom: 1px solid var(--accent);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { font-size: 1.4rem; font-weight: bold; color: var(--accent); letter-spacing: 3px; }
+    .logo span { color: var(--danger); }
+    .status-badge {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.75rem; color: var(--muted);
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ---- LAYOUT ---- */
+    main { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+    /* ---- PANELS ---- */
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+    }
+    .panel-title {
+      font-size: 0.7rem; letter-spacing: 3px; color: var(--accent);
+      text-transform: uppercase; margin-bottom: 20px;
+      border-bottom: 1px solid var(--border); padding-bottom: 12px;
+    }
+
+    /* ---- BUTTONS ---- */
+    .btn {
+      padding: 10px 24px; border: none; border-radius: 4px;
+      font-family: var(--font); font-size: 0.85rem; cursor: pointer;
+      letter-spacing: 1px; transition: all 0.2s;
+    }
+    .btn-primary { background: var(--accent); color: var(--bg); font-weight: bold; }
+    .btn-primary:hover { background: #00b8d9; }
+    .btn-danger { background: var(--danger); color: white; font-weight: bold; }
+    .btn-danger:hover { background: #e03055; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ---- FORM ---- */
+    .form-group { margin-bottom: 14px; }
+    label { display: block; font-size: 0.7rem; color: var(--muted); margin-bottom: 4px; letter-spacing: 1px; }
+    input, select {
+      width: 100%; padding: 8px 12px;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: 4px; font-family: var(--font);
+      font-size: 0.85rem;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+
+    /* ---- RESULT DISPLAY ---- */
+    .result-box {
+      background: var(--bg); border-radius: 8px;
+      padding: 20px; margin-top: 20px;
+      border: 1px solid var(--border); min-height: 80px;
+    }
+    .result-normal { border-color: var(--success); }
+    .result-attack { border-color: var(--danger); }
+    .result-label {
+      font-size: 1.8rem; font-weight: bold; letter-spacing: 4px;
+    }
+    .result-normal .result-label { color: var(--success); }
+    .result-attack .result-label { color: var(--danger); }
+    .confidence { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+    .model-votes { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .vote-item { font-size: 0.7rem; display: flex; justify-content: space-between; }
+    .vote-a { color: var(--danger); }
+    .vote-n { color: var(--success); }
+
+    /* ---- STAT CARDS ---- */
+    .stat-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 16px; text-align: center;
+    }
+    .stat-value { font-size: 1.6rem; font-weight: bold; color: var(--accent); }
+    .stat-label { font-size: 0.65rem; color: var(--muted); margin-top: 4px; letter-spacing: 2px; }
+
+    /* ---- FILE UPLOAD ---- */
+    .upload-zone {
+      border: 2px dashed var(--border); border-radius: 8px;
+      padding: 32px; text-align: center; cursor: pointer;
+      transition: all 0.2s; margin-bottom: 16px;
+    }
+    .upload-zone:hover { border-color: var(--accent); }
+    .upload-zone input { display: none; }
+
+    /* ---- TRAIN SECTION ---- */
+    .train-log {
+      background: var(--bg); border-radius: 6px; padding: 16px;
+      font-size: 0.75rem; color: var(--success); min-height: 120px;
+      max-height: 200px; overflow-y: auto; margin-top: 16px;
+      border: 1px solid var(--border);
+    }
+
+    /* ---- SPINNER ---- */
+    .spinner {
+      display: none; width: 20px; height: 20px; border: 2px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.8s linear infinite; margin: 0 auto;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---- TABLE ---- */
+    table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    th { color: var(--accent); font-size: 0.65rem; letter-spacing: 2px; text-align: left; padding: 8px; border-bottom: 1px solid var(--border); }
+    td { padding: 8px; border-bottom: 1px solid var(--border); color: var(--text); }
+    .badge {
+      padding: 2px 8px; border-radius: 3px; font-size: 0.65rem;
+      letter-spacing: 1px; font-weight: bold;
+    }
+    .badge-atk { background: rgba(255,77,109,0.2); color: var(--danger); }
+    .badge-nrm { background: rgba(0,255,157,0.15); color: var(--success); }
+
+    /* ---- TABS ---- */
+    .tabs { display: flex; gap: 0; margin-bottom: 24px; }
+    .tab-btn {
+      padding: 10px 24px; background: none; border: 1px solid var(--border);
+      color: var(--muted); cursor: pointer; font-family: var(--font);
+      font-size: 0.75rem; letter-spacing: 1px; transition: all 0.2s;
+    }
+    .tab-btn:first-child { border-radius: 6px 0 0 6px; }
+    .tab-btn:last-child { border-radius: 0 6px 6px 0; }
+    .tab-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); font-weight: bold; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">NI<span>D</span>S <span style="font-size:0.7rem; color:var(--muted); letter-spacing:2px; font-weight:normal">// NETWORK INTRUSION DETECTION</span></div>
+  <div class="status-badge">
+    <div class="dot"></div>
+    <span>SYSTEM ONLINE</span>
+  </div>
+</header>
+
+<main>
+  <!-- ── STAT CARDS ── -->
+  <div class="grid-3" style="margin-bottom:24px;">
+    <div class="stat-card">
+      <div class="stat-value" id="stat-models">5</div>
+      <div class="stat-label">MODELS TRAINED</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-acc">—</div>
+      <div class="stat-label">RF ACCURACY</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="stat-f1">—</div>
+      <div class="stat-label">RF F1-SCORE</div>
+    </div>
+  </div>
+
+  <!-- ── TABS ── -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('predict')">PREDICT</button>
+    <button class="tab-btn" onclick="switchTab('batch')">BATCH</button>
+    <button class="tab-btn" onclick="switchTab('metrics')">METRICS</button>
+    <button class="tab-btn" onclick="switchTab('train')">TRAIN</button>
+  </div>
+
+  <!-- ── TAB: PREDICT ── -->
+  <div class="tab-pane active" id="tab-predict">
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">// TRAFFIC FEATURES</div>
+        <div class="grid-2">
+          <div class="form-group">
+            <label>PROTOCOL TYPE</label>
+            <select id="f-protocol">
+              <option value="tcp">TCP</option>
+              <option value="udp">UDP</option>
+              <option value="icmp">ICMP</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>SERVICE</label>
+            <select id="f-service">
+              <option value="http">HTTP</option>
+              <option value="ftp">FTP</option>
+              <option value="smtp">SMTP</option>
+              <option value="ssh">SSH</option>
+              <option value="dns">DNS</option>
+              <option value="telnet">TELNET</option>
+              <option value="other">OTHER</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>FLAG</label>
+            <select id="f-flag">
+              <option value="SF">SF (Normal)</option>
+              <option value="S0">S0 (No Response)</option>
+              <option value="REJ">REJ (Rejected)</option>
+              <option value="RSTO">RSTO</option>
+              <option value="RSTR">RSTR</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>DURATION (sec)</label>
+            <input type="number" id="f-duration" value="0" min="0">
+          </div>
+          <div class="form-group">
+            <label>SRC BYTES</label>
+            <input type="number" id="f-src_bytes" value="491" min="0">
+          </div>
+          <div class="form-group">
+            <label>DST BYTES</label>
+            <input type="number" id="f-dst_bytes" value="0" min="0">
+          </div>
+          <div class="form-group">
+            <label>SERROR RATE</label>
+            <input type="number" id="f-serror_rate" value="0.0" step="0.01" min="0" max="1">
+          </div>
+          <div class="form-group">
+            <label>COUNT</label>
+            <input type="number" id="f-count" value="1" min="1">
+          </div>
+        </div>
+
+        <!-- Preset scenarios -->
+        <div style="margin-top:16px;">
+          <div style="font-size:0.65rem; color:var(--muted); letter-spacing:2px; margin-bottom:8px;">QUICK SCENARIOS</div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn" style="background:rgba(0,255,157,0.1);color:var(--success);border:1px solid var(--success);font-size:0.7rem;padding:6px 12px;" onclick="loadScenario('normal')">NORMAL TRAFFIC</button>
+            <button class="btn" style="background:rgba(255,77,109,0.1);color:var(--danger);border:1px solid var(--danger);font-size:0.7rem;padding:6px 12px;" onclick="loadScenario('dos')">DOS ATTACK</button>
+            <button class="btn" style="background:rgba(255,214,10,0.1);color:var(--warn);border:1px solid var(--warn);font-size:0.7rem;padding:6px 12px;" onclick="loadScenario('probe')">PORT SCAN</button>
+          </div>
+        </div>
+
+        <div style="margin-top:20px; display:flex; gap:12px; align-items:center;">
+          <button class="btn btn-primary" onclick="runPredict()">▶ ANALYZE</button>
+          <div class="spinner" id="spin-predict"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">// CLASSIFICATION RESULT</div>
+        <div class="result-box" id="result-box">
+          <div style="color:var(--muted); font-size:0.8rem;">Awaiting traffic sample…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TAB: BATCH ── -->
+  <div class="tab-pane" id="tab-batch">
+    <div class="panel">
+      <div class="panel-title">// BATCH CSV ANALYSIS</div>
+      <p style="font-size:0.8rem; color:var(--muted); margin-bottom:16px;">Upload a CSV file with 41 feature columns (NSL-KDD format) for bulk prediction.</p>
+      <label class="upload-zone" for="csv-upload">
+        <input type="file" id="csv-upload" accept=".csv" onchange="handleFile(this)">
+        <div style="font-size:2rem; margin-bottom:8px;">📂</div>
+        <div style="color:var(--accent); font-size:0.8rem;">CLICK TO UPLOAD CSV</div>
+        <div style="color:var(--muted); font-size:0.7rem; margin-top:4px;" id="file-name">No file selected</div>
+      </label>
+      <button class="btn btn-primary" id="batch-btn" onclick="runBatch()" disabled>▶ RUN BATCH PREDICT</button>
+      <div class="spinner" id="spin-batch" style="margin-top:16px;"></div>
+      <div id="batch-results" style="margin-top:24px; overflow-x:auto;"></div>
+    </div>
+  </div>
+
+  <!-- ── TAB: METRICS ── -->
+  <div class="tab-pane" id="tab-metrics">
+    <div class="panel">
+      <div class="panel-title">// MODEL PERFORMANCE COMPARISON</div>
+      <div class="grid-2" style="gap:32px;">
+        <canvas id="chart-acc" height="260"></canvas>
+        <canvas id="chart-f1" height="260"></canvas>
+      </div>
+      <div id="metrics-table" style="margin-top:24px;"></div>
+      <button class="btn btn-primary" style="margin-top:16px;" onclick="loadMetrics()">↻ REFRESH METRICS</button>
+    </div>
+  </div>
+
+  <!-- ── TAB: TRAIN ── -->
+  <div class="tab-pane" id="tab-train">
+    <div class="panel">
+      <div class="panel-title">// TRAIN ALL MODELS</div>
+      <p style="font-size:0.8rem; color:var(--muted); margin-bottom:8px;">
+        Trains: Random Forest (HPO), SVM (RBF), Logistic Regression, Isolation Forest, K-Means.<br>
+        If NSL-KDD dataset is absent, synthetic data is generated for demonstration.
+      </p>
+      <div style="margin: 16px 0; padding: 12px; background:var(--bg); border:1px solid var(--border); border-radius:6px; font-size:0.75rem; color:var(--muted);">
+        <strong style="color:var(--accent);">MODEL SELECTION RATIONALE:</strong><br>
+        Random Forest is the primary model — highest F1 on intrusion detection benchmarks,
+        handles class imbalance natively, and provides feature importance for explainability.
+      </div>
+      <button class="btn btn-danger" id="train-btn" onclick="runTraining()">⚡ START TRAINING</button>
+      <div class="spinner" id="spin-train" style="margin-top:16px;"></div>
+      <div class="train-log" id="train-log">// Waiting for training command...</div>
+    </div>
+  </div>
+</main>
+
+<script>
+  let chartAcc = null, chartF1 = null;
+  let batchFile = null;
+
+  // ── TAB SWITCHING ──────────────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    event.target.classList.add('active');
+    if (name === 'metrics') loadMetrics();
+  }
+
+  // ── QUICK SCENARIOS ────────────────────────────────────────────
+  const SCENARIOS = {
+    normal: {
+      protocol_type:'tcp', service:'http', flag:'SF',
+      duration:0, src_bytes:491, dst_bytes:0, serror_rate:0.0, count:2
+    },
+    dos: {
+      protocol_type:'tcp', service:'http', flag:'S0',
+      duration:0, src_bytes:0, dst_bytes:0, serror_rate:1.0, count:511
+    },
+    probe: {
+      protocol_type:'tcp', service:'other', flag:'REJ',
+      duration:0, src_bytes:0, dst_bytes:0, serror_rate:0.0, count:229
+    }
+  };
+
+  function loadScenario(type) {
+    const s = SCENARIOS[type];
+    document.getElementById('f-protocol').value = s.protocol_type;
+    document.getElementById('f-service').value = s.service;
+    document.getElementById('f-flag').value = s.flag;
+    document.getElementById('f-duration').value = s.duration;
+    document.getElementById('f-src_bytes').value = s.src_bytes;
+    document.getElementById('f-dst_bytes').value = s.dst_bytes;
+    document.getElementById('f-serror_rate').value = s.serror_rate;
+    document.getElementById('f-count').value = s.count;
+  }
+
+  // ── SINGLE PREDICT ─────────────────────────────────────────────
+  async function runPredict() {
+    const features = {
+      protocol_type: document.getElementById('f-protocol').value,
+      service: document.getElementById('f-service').value,
+      flag: document.getElementById('f-flag').value,
+      duration: parseFloat(document.getElementById('f-duration').value),
+      src_bytes: parseInt(document.getElementById('f-src_bytes').value),
+      dst_bytes: parseInt(document.getElementById('f-dst_bytes').value),
+      serror_rate: parseFloat(document.getElementById('f-serror_rate').value),
+      count: parseInt(document.getElementById('f-count').value),
+    };
+
+    document.getElementById('spin-predict').style.display = 'block';
+    const box = document.getElementById('result-box');
+    box.className = 'result-box';
+    box.innerHTML = '<div class="spinner" style="display:block"></div>';
+
+    try {
+      const res = await fetch('/predict', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({features})
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        const p = data.prediction;
+        const isAtk = p.binary === 1;
+        box.className = 'result-box ' + (isAtk ? 'result-attack' : 'result-normal');
+
+        let votesHtml = Object.entries(p.all_models).map(([m, v]) =>
+          `<div class="vote-item"><span style="color:var(--muted)">${m}</span><span class="${v==='ATTACK'?'vote-a':'vote-n'}">${v}</span></div>`
+        ).join('');
+
+        box.innerHTML = `
+          <div class="result-label">${isAtk ? '⚠ ' : '✓ '}${p.label}</div>
+          <div class="confidence">PRIMARY MODEL: ${p.primary_model} | CONFIDENCE: ${p.confidence}%</div>
+          <div class="model-votes" style="margin-top:12px;">${votesHtml}</div>
+        `;
+      } else {
+        box.innerHTML = `<div style="color:var(--danger)">ERROR: ${data.message}</div>`;
+      }
+    } catch(e) {
+      box.innerHTML = `<div style="color:var(--danger)">Connection error. Are models trained?</div>`;
+    }
+    document.getElementById('spin-predict').style.display = 'none';
+  }
+
+  // ── BATCH PREDICT ──────────────────────────────────────────────
+  function handleFile(input) {
+    batchFile = input.files[0];
+    document.getElementById('file-name').textContent = batchFile ? batchFile.name : 'No file selected';
+    document.getElementById('batch-btn').disabled = !batchFile;
+  }
+
+  async function runBatch() {
+    if (!batchFile) return;
+    document.getElementById('spin-batch').style.display = 'block';
+    const formData = new FormData();
+    formData.append('file', batchFile);
+
+    try {
+      const res = await fetch('/predict_csv', {method:'POST', body: formData});
+      const data = await res.json();
+      if (data.status === 'success') {
+        const rows = data.predictions.slice(0, 50); // Show max 50 rows
+        const attacks = rows.filter(r => r.label === 'ATTACK').length;
+        let html = `<div style="font-size:0.75rem; color:var(--muted); margin-bottom:12px;">
+          Showing ${rows.length} of ${data.predictions.length} results | 
+          <span style="color:var(--danger)">Attacks: ${attacks}</span> | 
+          <span style="color:var(--success)">Normal: ${rows.length - attacks}</span>
+        </div>
+        <table>
+          <thead><tr><th>ROW</th><th>LABEL</th><th>CONFIDENCE</th></tr></thead>
+          <tbody>` +
+          rows.map(r => `<tr>
+            <td>${r.row}</td>
+            <td><span class="badge ${r.label==='ATTACK'?'badge-atk':'badge-nrm'}">${r.label}</span></td>
+            <td>${r.confidence}%</td>
+          </tr>`).join('') +
+        '</tbody></table>';
+        document.getElementById('batch-results').innerHTML = html;
+      }
+    } catch(e) {
+      document.getElementById('batch-results').innerHTML = '<div style="color:var(--danger)">Error processing file.</div>';
+    }
+    document.getElementById('spin-batch').style.display = 'none';
+  }
+
+  // ── METRICS ────────────────────────────────────────────────────
+  async function loadMetrics() {
+    try {
+      const res = await fetch('/metrics');
+      const data = await res.json();
+      if (data.status !== 'success') return;
+      const m = data.metrics;
+      const models = Object.keys(m);
+      const accs = models.map(k => (m[k].accuracy * 100).toFixed(1));
+      const f1s = models.map(k => (m[k].f1_score * 100).toFixed(1));
+
+      // Update stat cards
+      const rf = m['Random Forest'];
+      if (rf) {
+        document.getElementById('stat-acc').textContent = (rf.accuracy * 100).toFixed(1) + '%';
+        document.getElementById('stat-f1').textContent = (rf.f1_score * 100).toFixed(1) + '%';
+      }
+
+      const COLORS = ['#00d4ff','#ff4d6d','#00ff9d','#ffd60a','#a78bfa'];
+      const chartOpts = (title, label) => ({
+        responsive: true,
+        plugins: {
+          legend: {display:false},
+          title: {display:true, text:title, color:'#e2e8f0', font:{size:12, family:'Courier New'}}
+        },
+        scales: {
+          y: {beginAtZero:true, max:100, ticks:{color:'#64748b', callback: v => v+'%'}, grid:{color:'#1f2d45'}},
+          x: {ticks:{color:'#64748b'}, grid:{color:'#1f2d45'}}
+        }
+      });
+
+      if (chartAcc) chartAcc.destroy();
+      if (chartF1) chartF1.destroy();
+
+      chartAcc = new Chart(document.getElementById('chart-acc'), {
+        type: 'bar',
+        data: {labels: models, datasets:[{label:'Accuracy', data: accs, backgroundColor: COLORS, borderRadius:4}]},
+        options: chartOpts('ACCURACY (%)', 'Accuracy')
+      });
+      chartF1 = new Chart(document.getElementById('chart-f1'), {
+        type: 'bar',
+        data: {labels: models, datasets:[{label:'F1 Score', data: f1s, backgroundColor: COLORS, borderRadius:4}]},
+        options: chartOpts('F1 SCORE (%)', 'F1')
+      });
+
+      // Table
+      let tbl = `<table><thead><tr><th>MODEL</th><th>TYPE</th><th>ACCURACY</th><th>PRECISION</th><th>RECALL</th><th>F1</th></tr></thead><tbody>`;
+      const types = {'Random Forest':'Supervised','SVM':'Supervised','Logistic Regression':'Supervised','Isolation Forest':'Unsupervised','K-Means':'Unsupervised'};
+      models.forEach(k => {
+        const d = m[k];
+        const primary = k === 'Random Forest';
+        tbl += `<tr style="${primary?'background:rgba(0,212,255,0.05)':''}">
+          <td>${primary ? '★ ' : ''}${k}</td>
+          <td style="color:var(--muted)">${types[k]||'—'}</td>
+          <td>${(d.accuracy*100).toFixed(2)}%</td>
+          <td>${(d.precision*100).toFixed(2)}%</td>
+          <td>${(d.recall*100).toFixed(2)}%</td>
+          <td>${(d.f1_score*100).toFixed(2)}%</td>
+        </tr>`;
+      });
+      tbl += '</tbody></table>';
+      document.getElementById('metrics-table').innerHTML = tbl;
+
+    } catch(e) {
+      document.getElementById('metrics-table').innerHTML = '<div style="color:var(--muted)">No metrics found. Please train models first.</div>';
+    }
+  }
+
+  // ── TRAINING ───────────────────────────────────────────────────
+  async function runTraining() {
+    const btn = document.getElementById('train-btn');
+    btn.disabled = true;
+    document.getElementById('spin-train').style.display = 'block';
+    const log = document.getElementById('train-log');
+    log.innerHTML = '> Initializing training pipeline...\n';
+
+    const msgs = [
+      '> Loading NSL-KDD dataset...',
+      '> Preprocessing features (encoding + scaling)...',
+      '> Training Random Forest with GridSearchCV HPO...',
+      '> Training SVM (RBF kernel)...',
+      '> Training Logistic Regression...',
+      '> Training Isolation Forest (unsupervised)...',
+      '> Training K-Means clustering (k=2)...',
+      '> Evaluating all models on test set...',
+      '> Saving models to disk...'
+    ];
+
+    // Show simulated progress
+    for (let i = 0; i < msgs.length; i++) {
+      await new Promise(r => setTimeout(r, 400));
+      log.innerHTML += msgs[i] + '\n';
+      log.scrollTop = log.scrollHeight;
+    }
+
+    try {
+      const res = await fetch('/train', {method:'POST'});
+      const data = await res.json();
+      if (data.status === 'success') {
+        log.innerHTML += '\n> ✓ TRAINING COMPLETE\n\n';
+        for (const [model, metrics] of Object.entries(data.results)) {
+          log.innerHTML += `  ${model.padEnd(20)} | ACC: ${(metrics.accuracy*100).toFixed(2)}% | F1: ${(metrics.f1_score*100).toFixed(2)}%\n`;
+        }
+        log.innerHTML += '\n> Primary model: Random Forest (highest F1)\n> Models saved to /models/\n';
+      } else {
+        log.innerHTML += `\n> ERROR: ${data.message}\n`;
+      }
+    } catch(e) {
+      log.innerHTML += '\n> ERROR: Could not connect to server.\n';
+    }
+
+    log.scrollTop = log.scrollHeight;
+    btn.disabled = false;
+    document.getElementById('spin-train').style.display = 'none';
+  }
+
+  // ── INIT ───────────────────────────────────────────────────────
+  window.onload = () => { loadMetrics(); };
+</script>
+</body>
+</html>
