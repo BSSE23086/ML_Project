@@ -1,0 +1,384 @@
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+  .cs-root { background: #0F172A; font-family: 'Inter', sans-serif; padding: 2rem 1.5rem; min-height: 100vh; color: #E2E8F0; box-sizing: border-box; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .cs-header { text-align: center; margin-bottom: 3rem; padding-bottom: 2rem; border-bottom: 1px solid rgba(6,182,212,0.2); }
+  .cs-badge { display: inline-block; background: rgba(6,182,212,0.1); border: 1px solid rgba(6,182,212,0.3); color: #06B6D4; font-size: 10px; letter-spacing: 2px; padding: 4px 12px; border-radius: 20px; margin-bottom: 1rem; font-weight: 600; }
+  .cs-title { font-size: 1.9rem; font-weight: 700; color: #F1F5F9; margin: 0 0 0.5rem; letter-spacing: -0.5px; line-height: 1.2; }
+  .cs-subtitle { font-size: 0.85rem; color: #64748B; margin: 0; }
+  .cs-subtitle span { color: #06B6D4; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .cs-stats-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 3rem; }
+  .cs-stat { background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.07); border-radius: 10px; padding: 1rem; text-align: center; }
+  .cs-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 1.4rem; font-weight: 700; display: block; }
+  .cs-stat-lbl { font-size: 10px; color: #475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; display: block; }
+  .cs-timeline { position: relative; padding-left: 28px; }
+  .cs-timeline::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: linear-gradient(to bottom, #EF4444 0%, #F59E0B 33%, #06B6D4 55%, #10B981 100%); border-radius: 2px; }
+  .cs-section { margin-bottom: 2.5rem; position: relative; }
+  .cs-node { position: absolute; left: -21px; top: 12px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #0F172A; z-index: 2; }
+  .cs-section-label { font-size: 9px; letter-spacing: 2px; font-weight: 700; margin-bottom: 0.75rem; padding: 3px 10px; border-radius: 20px; display: inline-block; }
+  .cs-section-label.fail { background: rgba(239,68,68,0.1); color: #EF4444; border: 1px solid rgba(239,68,68,0.2); }
+  .cs-section-label.opt { background: rgba(6,182,212,0.1); color: #06B6D4; border: 1px solid rgba(6,182,212,0.2); }
+  .cs-section-label.win { background: rgba(16,185,129,0.1); color: #10B981; border: 1px solid rgba(16,185,129,0.2); }
+  .cs-section-title { font-size: 1.05rem; font-weight: 600; color: #CBD5E1; margin-bottom: 1rem; }
+  .cs-cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cs-card { background: rgba(30,41,59,0.6); border-radius: 12px; padding: 1.2rem; position: relative; overflow: hidden; }
+  .cs-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .cs-card.fail::before { background: linear-gradient(90deg, #EF4444, #F59E0B); }
+  .cs-card.success::before { background: linear-gradient(90deg, #10B981, #06B6D4); }
+  .cs-card.ultimate::before { background: linear-gradient(90deg, #10B981, #06B6D4, #10B981); }
+  .cs-card.fail { border: 1px solid rgba(239,68,68,0.2); }
+  .cs-card.success { border: 1px solid rgba(16,185,129,0.2); }
+  .cs-card.ultimate { border: 1px solid rgba(16,185,129,0.35); }
+  .cs-card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+  .cs-card-name { font-size: 0.8rem; font-weight: 600; color: #94A3B8; }
+  .cs-card-model { font-size: 1rem; font-weight: 700; color: #E2E8F0; margin-top: 2px; }
+  .cs-status { font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 20px; letter-spacing: 1px; }
+  .cs-status.fail { background: rgba(239,68,68,0.15); color: #EF4444; border: 1px solid rgba(239,68,68,0.3); }
+  .cs-status.ok { background: rgba(16,185,129,0.12); color: #10B981; border: 1px solid rgba(16,185,129,0.3); }
+  .cs-kpi-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+  .cs-kpi { background: rgba(15,23,42,0.7); border-radius: 8px; padding: 0.6rem 0.75rem; }
+  .cs-kpi-val { font-family: 'JetBrains Mono', monospace; font-size: 1.25rem; font-weight: 700; line-height: 1; }
+  .cs-kpi-lbl { font-size: 9px; color: #475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; }
+  .cs-kpi-val.fail-col { color: #F59E0B; }
+  .cs-kpi-val.zero { color: #EF4444; }
+  .cs-kpi-val.ok-col { color: #10B981; }
+  .cs-kpi-val.perfect { color: #06B6D4; }
+  .cs-mini-metrics { display: flex; gap: 8px; margin-bottom: 0.9rem; flex-wrap: wrap; }
+  .cs-pill { font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 8px; border-radius: 6px; }
+  .cs-pill.zero { background: rgba(239,68,68,0.1); color: #EF4444; border: 1px solid rgba(239,68,68,0.2); }
+  .cs-pill.perfect { background: rgba(16,185,129,0.1); color: #10B981; border: 1px solid rgba(16,185,129,0.2); }
+  .cs-pill.mid { background: rgba(245,158,11,0.1); color: #F59E0B; border: 1px solid rgba(245,158,11,0.2); }
+  .cs-diagnosis { font-size: 0.72rem; line-height: 1.55; color: #64748B; border-left: 2px solid rgba(100,116,139,0.3); padding-left: 0.75rem; }
+  .cs-opt-card { background: rgba(6,182,212,0.05); border: 1px solid rgba(6,182,212,0.25); border-radius: 12px; padding: 1.4rem; position: relative; overflow: hidden; }
+  .cs-opt-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: #06B6D4; }
+  .cs-opt-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.1rem; }
+  .cs-opt-title { font-size: 1rem; font-weight: 700; color: #06B6D4; }
+  .cs-opt-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1rem; }
+  .cs-opt-stat { background: rgba(15,23,42,0.7); border-radius: 8px; padding: 0.7rem; text-align: center; }
+  .cs-opt-val { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 700; color: #06B6D4; display: block; }
+  .cs-opt-lbl { font-size: 9px; color: #475569; text-transform: uppercase; letter-spacing: 1px; margin-top: 3px; display: block; }
+  .cs-opt-impact { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 0.9rem; }
+  .cs-impact-item { background: rgba(15,23,42,0.5); border-radius: 8px; padding: 0.7rem; }
+  .cs-impact-label { font-size: 9px; color: #475569; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .cs-impact-val { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 600; }
+  .cs-before { color: #EF4444; }
+  .cs-after { color: #10B981; }
+  .cs-arrow { color: #475569; margin: 0 4px; }
+  .cs-reduction { display: inline-block; background: rgba(16,185,129,0.1); color: #10B981; font-size: 9px; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-weight: 700; }
+  .cs-tier-badge { font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 2px 8px; border-radius: 4px; }
+  .cs-tier-b { background: rgba(6,182,212,0.1); color: #06B6D4; border: 1px solid rgba(6,182,212,0.3); }
+  .cs-tier-c { background: rgba(16,185,129,0.12); color: #10B981; border: 1px solid rgba(16,185,129,0.3); }
+  .cs-ultimate-glow { position: absolute; bottom: 0; right: 0; width: 120px; height: 120px; background: radial-gradient(circle, rgba(16,185,129,0.08) 0%, transparent 70%); pointer-events: none; }
+  .cs-footer { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.06); display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .cs-footer-item { text-align: center; }
+  .cs-footer-val { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 600; color: #10B981; }
+  .cs-footer-lbl { font-size: 9px; color: #334155; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+  .cs-config { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #475569; background: rgba(15,23,42,0.8); border-radius: 6px; padding: 6px 10px; margin-top: 0.8rem; border: 1px solid rgba(255,255,255,0.05); }
+  .cs-config span { color: #06B6D4; }
+  .cs-opt-desc { font-size: 0.75rem; color: #64748B; line-height: 1.55; }
+  .cs-opt-desc strong { color: #94A3B8; font-weight: 600; }
+</style>
+
+<div class="cs-root">
+  <h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">CyberShield ML experiment report: iterative model selection from failure through optimization to breakthrough results on 2.52 million network flows.</h2>
+
+  <div class="cs-header">
+    <div class="cs-badge">◈ CYBERSHIELD · EXPERIMENT LOG · CLASSIFIED</div>
+    <h1 class="cs-title">The Training Crucible</h1>
+    <p style="font-size:1rem;color:#475569;margin:0 0 0.5rem;font-weight:300;letter-spacing:1px;">ITERATIVE MODEL SELECTION REPORT</p>
+    <p class="cs-subtitle">Evaluating <span>2,520,798</span> network flows across <span>78</span> features · IDS/IPS threat classification</p>
+  </div>
+
+  <div class="cs-stats-bar">
+    <div class="cs-stat">
+      <span class="cs-stat-val mono" style="color:#06B6D4">2.52M</span>
+      <span class="cs-stat-lbl">Network Flows</span>
+    </div>
+    <div class="cs-stat">
+      <span class="cs-stat-val mono" style="color:#F59E0B">78</span>
+      <span class="cs-stat-lbl">Feature Dimensions</span>
+    </div>
+    <div class="cs-stat">
+      <span class="cs-stat-val mono" style="color:#10B981">4</span>
+      <span class="cs-stat-lbl">Experiments Run</span>
+    </div>
+  </div>
+
+  <div class="cs-timeline">
+
+    <!-- SECTION 1: FAILURES -->
+    <div class="cs-section">
+      <div class="cs-node" style="background:#EF4444;"></div>
+      <span class="cs-section-label fail">▲ PHASE 01 · EARLY BASELINES</span>
+      <div class="cs-section-title">Failure Analysis: Linear & Deep Baselines</div>
+      <div class="cs-cards-grid">
+
+        <div class="cs-card fail">
+          <div class="cs-card-head">
+            <div>
+              <div class="cs-card-name">Experiment 01-A</div>
+              <div class="cs-card-model">Normal Equation</div>
+              <div style="font-size:10px;color:#475569;margin-top:2px;">Linear Regression Baseline</div>
+            </div>
+            <span class="cs-status fail">✕ FAILED</span>
+          </div>
+          <div class="cs-kpi-row">
+            <div class="cs-kpi">
+              <div class="cs-kpi-val fail-col">80.08%</div>
+              <div class="cs-kpi-lbl">Accuracy</div>
+            </div>
+            <div class="cs-kpi">
+              <div class="cs-kpi-val zero">&lt; 0.10</div>
+              <div class="cs-kpi-lbl">Macro F1</div>
+            </div>
+          </div>
+          <div class="cs-mini-metrics">
+            <span class="cs-pill zero">Rare Attack Recall: 0.00</span>
+          </div>
+          <div class="cs-diagnosis">
+            Non-linear traffic correlations defeated the closed-form solver. The 1:230,000 class imbalance caused total majority-class dominance — every packet classified as <code style="font-size:9px;color:#F59E0B;">BENIGN</code>.
+          </div>
+          <div class="cs-config">
+            solver: <span>normal_eq</span> · type: <span>linear</span>
+          </div>
+        </div>
+
+        <div class="cs-card fail">
+          <div class="cs-card-head">
+            <div>
+              <div class="cs-card-name">Experiment 01-B</div>
+              <div class="cs-card-model">3-Layer MLP</div>
+              <div style="font-size:10px;color:#475569;margin-top:2px;">Deep Learning on Clean Data</div>
+            </div>
+            <span class="cs-status fail">✕ FAILED</span>
+          </div>
+          <div class="cs-kpi-row">
+            <div class="cs-kpi">
+              <div class="cs-kpi-val fail-col">82.41%</div>
+              <div class="cs-kpi-lbl">Accuracy</div>
+            </div>
+            <div class="cs-kpi">
+              <div class="cs-kpi-val zero">0.1134</div>
+              <div class="cs-kpi-lbl">Macro F1</div>
+            </div>
+          </div>
+          <div class="cs-mini-metrics">
+            <span class="cs-pill zero">Heartbleed Recall: 0.00</span>
+          </div>
+          <div class="cs-diagnosis">
+            SGD minimized cross-entropy loss by collapsing to the 80% majority class. Sophisticated anomalies were missed entirely due to majority-class collapse.
+          </div>
+          <div class="cs-config">
+            layers: <span>3</span> · optimizer: <span>sgd</span> · loss: <span>cross_entropy</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SECTION 2: OPTIMIZATION ENGINE -->
+    <div class="cs-section">
+      <div class="cs-node" style="background:#06B6D4;"></div>
+      <span class="cs-section-label opt">⚡ PHASE 02 · OPTIMIZATION ENGINE</span>
+      <div class="cs-section-title">Hardware Acceleration: Parallel Grid Search</div>
+      <div class="cs-opt-card">
+        <div class="cs-opt-head">
+          <div class="cs-opt-title">◈ Parallel Processing Breakthrough</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#06B6D4;background:rgba(6,182,212,0.1);padding:4px 10px;border-radius:6px;border:1px solid rgba(6,182,212,0.2);">n_jobs=-1</div>
+        </div>
+
+        <div class="cs-opt-stats">
+          <div class="cs-opt-stat">
+            <span class="cs-opt-val">2,520,798</span>
+            <span class="cs-opt-lbl">Rows Processed</span>
+          </div>
+          <div class="cs-opt-stat">
+            <span class="cs-opt-val">× 78</span>
+            <span class="cs-opt-lbl">Feature Columns</span>
+          </div>
+          <div class="cs-opt-stat">
+            <span class="cs-opt-val" style="color:#10B981">95.8%</span>
+            <span class="cs-opt-lbl">Time Reduction</span>
+          </div>
+        </div>
+
+        <div class="cs-opt-desc">
+          <strong>The Decision:</strong> Implemented <code style="font-size:10px;color:#06B6D4;">n_jobs=-1</code> for Random Forest tree building and hyperparameter grid search, distributing computational load across all available CPU cores.
+        </div>
+
+        <div class="cs-opt-impact">
+          <div class="cs-impact-item">
+            <div class="cs-impact-label">Training Time: Before → After</div>
+            <div class="cs-impact-val">
+              <span class="cs-before">84 hrs</span>
+              <span class="cs-arrow">→</span>
+              <span class="cs-after">3.5 hrs</span>
+              <span class="cs-reduction">-95.8%</span>
+            </div>
+          </div>
+          <div class="cs-impact-item">
+            <div class="cs-impact-label">Impact Unlocked</div>
+            <div class="cs-impact-val" style="font-size:0.72rem;color:#64748B;font-family:'Inter',sans-serif;font-weight:400;line-height:1.5;">Rapid iteration over class-weighting hyperparameters at scale</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: ARCHITECTURAL BREAKTHROUGH -->
+    <div class="cs-section">
+      <div class="cs-node" style="background:#10B981;"></div>
+      <span class="cs-section-label win">✦ PHASE 03 · ARCHITECTURAL BREAKTHROUGH</span>
+      <div class="cs-section-title">Tiered Defense Architecture: Production Models</div>
+      <div class="cs-cards-grid">
+
+        <div class="cs-card success">
+          <div class="cs-card-head">
+            <div>
+              <div class="cs-card-name"><span class="cs-tier-badge cs-tier-b">TIER B</span></div>
+              <div class="cs-card-model" style="margin-top:6px;">The Enforcer</div>
+              <div style="font-size:10px;color:#475569;margin-top:2px;">Random Forest · Frontline Filter</div>
+            </div>
+            <span class="cs-status ok">✓ SUCCESS</span>
+          </div>
+          <div class="cs-kpi-row">
+            <div class="cs-kpi">
+              <div class="cs-kpi-val ok-col">99.83%</div>
+              <div class="cs-kpi-lbl">Accuracy</div>
+            </div>
+            <div class="cs-kpi">
+              <div class="cs-kpi-val ok-col">0.8605</div>
+              <div class="cs-kpi-lbl">Macro F1</div>
+            </div>
+          </div>
+          <div class="cs-mini-metrics">
+            <span class="cs-pill perfect">Infiltration: 1.00</span>
+            <span class="cs-pill mid">Heartbleed: 0.50</span>
+          </div>
+          <div class="cs-diagnosis">
+            <code style="font-size:9px;color:#06B6D4;">class_weight='balanced'</code> with 75 estimators penalizes majority-class predictions mathematically, creating a lightning-fast frontline filter.
+          </div>
+          <div class="cs-config">
+            n_est: <span>75</span> · max_depth: <span>25</span> · weight: <span>balanced</span>
+          </div>
+        </div>
+
+        <div class="cs-card ultimate">
+          <div class="cs-ultimate-glow"></div>
+          <div class="cs-card-head">
+            <div>
+              <div class="cs-card-name"><span class="cs-tier-badge cs-tier-c">TIER C</span></div>
+              <div class="cs-card-model" style="margin-top:6px;">The Deep Scanner</div>
+              <div style="font-size:10px;color:#475569;margin-top:2px;">XGBoost · Ultra-Rare Detector</div>
+            </div>
+            <div>
+              <span class="cs-status ok" style="background:rgba(16,185,129,0.15);border-color:rgba(16,185,129,0.4);">✦ ULTIMATE</span>
+            </div>
+          </div>
+          <div class="cs-kpi-row">
+            <div class="cs-kpi" style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);">
+              <div class="cs-kpi-val ok-col">99.86%</div>
+              <div class="cs-kpi-lbl">Accuracy</div>
+            </div>
+            <div class="cs-kpi" style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);">
+              <div class="cs-kpi-val ok-col">0.8821</div>
+              <div class="cs-kpi-lbl">Macro F1</div>
+            </div>
+          </div>
+          <div class="cs-mini-metrics">
+            <span class="cs-pill perfect">Infiltration: 1.00</span>
+            <span class="cs-pill perfect">Heartbleed: 1.00</span>
+          </div>
+          <div class="cs-diagnosis">
+            <code style="font-size:9px;color:#06B6D4;">compute_sample_weight</code> via <code style="font-size:9px;color:#06B6D4;">hist</code> method forces XGBoost to treat one Heartbleed miss as <strong style="color:#10B981;">230,000×</strong> more costly than a normal packet error. Perfect recall achieved.
+          </div>
+          <div class="cs-config">
+            n_est: <span>200</span> · lr: <span>0.1</span> · tree: <span>hist</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- COMPARISON CHART -->
+  <div style="background:rgba(30,41,59,0.4);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:1.2rem;margin-top:1rem;">
+    <div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:1px;margin-bottom:1rem;">Model Progression · Macro F1 Score Comparison</div>
+    <div style="position:relative;height:180px;">
+      <canvas id="progressChart" role="img" aria-label="Bar chart showing Macro F1 progression across four models: Normal Equation below 0.10, MLP at 0.1134, Random Forest at 0.8605, XGBoost at 0.8821.">F1 scores: Normal Eq ~0.05, MLP 0.1134, Random Forest 0.8605, XGBoost 0.8821.</canvas>
+    </div>
+    <div style="display:flex;gap:16px;margin-top:10px;flex-wrap:wrap;">
+      <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#64748B;"><span style="width:10px;height:10px;border-radius:2px;background:#EF4444;display:inline-block;"></span>Failed baselines</span>
+      <span style="display:flex;align-items:center;gap:5px;font-size:11px;color:#64748B;"><span style="width:10px;height:10px;border-radius:2px;background:#10B981;display:inline-block;"></span>Production models</span>
+    </div>
+  </div>
+
+  <!-- FOOTER SUMMARY -->
+  <div class="cs-footer">
+    <div class="cs-footer-item">
+      <div class="cs-footer-val">99.86%</div>
+      <div class="cs-footer-lbl">Peak Accuracy</div>
+    </div>
+    <div class="cs-footer-item">
+      <div class="cs-footer-val">0.8821</div>
+      <div class="cs-footer-lbl">Best Macro F1</div>
+    </div>
+    <div class="cs-footer-item">
+      <div class="cs-footer-val">1.00</div>
+      <div class="cs-footer-lbl">Heartbleed Recall</div>
+    </div>
+    <div class="cs-footer-item">
+      <div class="cs-footer-val">95.8%</div>
+      <div class="cs-footer-lbl">Training Speedup</div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+  new Chart(document.getElementById('progressChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Normal Equation', '3-Layer MLP', 'Random Forest\n(Tier B)', 'XGBoost\n(Tier C)'],
+      datasets: [{
+        label: 'Macro F1',
+        data: [0.05, 0.1134, 0.8605, 0.8821],
+        backgroundColor: ['#EF4444', '#F59E0B', '#10B981', '#10B981'],
+        borderColor: ['rgba(239,68,68,0.3)', 'rgba(245,158,11,0.3)', 'rgba(16,185,129,0.4)', 'rgba(16,185,129,0.5)'],
+        borderWidth: 1,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#1E293B',
+          titleColor: '#94A3B8',
+          bodyColor: '#E2E8F0',
+          borderColor: 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
+          callbacks: { label: (ctx) => ' Macro F1: ' + ctx.parsed.y.toFixed(4) }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#475569', font: { size: 10, family: "'JetBrains Mono', monospace" } },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          border: { color: 'rgba(255,255,255,0.08)' }
+        },
+        y: {
+          min: 0, max: 1,
+          ticks: { color: '#475569', font: { size: 10, family: "'JetBrains Mono', monospace" }, callback: (v) => v.toFixed(1) },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          border: { color: 'rgba(255,255,255,0.08)' }
+        }
+      }
+    }
+  });
+</script>
