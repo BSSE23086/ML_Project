@@ -326,9 +326,7 @@ CyberShield solves these issues through:
 
 # License
 
-This project was developed as an academic final project at
-Information Technology University.
-
+This project was developed as an academic final project by the students of Information Technology University
 ---
 
 <p align="center">
